@@ -10,3 +10,4 @@ DISTANCES = {
     "Kochi": 540
 }
 CHARGE_DURATION = 25
+MAX_RANGE = 240
