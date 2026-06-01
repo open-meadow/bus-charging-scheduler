@@ -1,8 +1,9 @@
+from itertools import combinations
 import streamlit as st
 import pandas as pd
 
 from scenario_loader import SCENARIOS
-from constants import SPEED, SEGMENTS, STATIONS, DISTANCES, CHARGE_DURATION
+from constants import MAX_RANGE, SPEED, SEGMENTS, STATIONS, DISTANCES, CHARGE_DURATION
 from models import ChargingEvent
 
 def to_minutes(time_string):
@@ -23,6 +24,18 @@ def is_valid(plan):
             return False
     return True
 
+def generate_all_charging_plans():
+    valid_plans = []
+    
+    for i in range(len(STATIONS) + 1):
+        for combo in combinations(STATIONS, i):
+            plan = list(combo)
+            
+            if is_valid(plan):
+                valid_plans.append(plan)
+    
+    return valid_plans
+    
 def get_selected_buses():
     scenario_name = st.selectbox(
         "Pick scenario",
@@ -31,15 +44,17 @@ def get_selected_buses():
 
     return SCENARIOS[scenario_name]
 
-def simulate_buses(bus, charging_plan=None):
+def simulate_buses(bus, charging_plan):
     current_time = to_minutes(bus["departure"])
     current_station = "Bengaluru"
 
     timeline = []
 
-    # default plan (temporary — later scheduler will generate this)
-    if charging_plan is None:
-        charging_plan = ["B", "D"]
+    # # default plan (temporary — later scheduler will generate this)
+    # if charging_plan is None:
+    #     charging_plan = ["B", "D"]
+    
+    
 
     timeline.append({
         "event": "DEPART",
@@ -165,8 +180,25 @@ def main():
 
     st.subheader("Simulation Results")
     for bus in buses:
-        result = simulate_buses(bus)
-        st.write(result)
+        best_plan = None
+        best_score = float("inf")
+        
+        all_plans = generate_all_charging_plans()
+        
+        for plan in all_plans:
+            result = simulate_buses(bus, plan)
+            
+            score = len(result["timeline"]) # placeholder scoring
+            
+            if score < best_score:
+                best_score = score
+                best_plan = plan
+            
+        st.write({
+            "bus_id": bus["id"],
+            "best_plan": best_plan,
+            "best_score": best_score
+        })
 
     schedule = generate_schedule(buses)
 
